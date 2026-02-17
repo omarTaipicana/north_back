@@ -1,32 +1,31 @@
-const catchError = require('../utils/catchError');
+const catchError = require("../utils/catchError");
 const crypto = require("crypto");
 const QRCode = require("qrcode");
-const Payments = require('../models/Payments');
-const Orders = require('../models/Orders');
-const Events = require('../models/Events');
+const Payments = require("../models/Payments");
+const Orders = require("../models/Orders");
+const Events = require("../models/Events");
 const Tickets = require("../models/Tickets");
-const sequelize = require('../utils/connection');
-const sendEmail = require('../utils/sendEmail');
+const sequelize = require("../utils/connection");
+const sendEmail = require("../utils/sendEmail");
 const path = require("path");
 const fs = require("fs");
 const { Op } = require("sequelize");
-
-
-
+const emitDashboardUpdate = require("../utils/emitDashboardUpdate");
 
 const create = catchError(async (req, res) => {
-
   const proof_url = req.fileUrl;
 
   if (!req.file || !proof_url) {
-    return res.status(400).json({ message: "Debes subir un archivo comprobante" });
+    return res
+      .status(400)
+      .json({ message: "Debes subir un archivo comprobante" });
   }
 
   const { orderId, bank_name, deposit_id, amount, currency } = req.body;
 
   if (!orderId || !amount) {
     return res.status(400).json({
-      message: "Faltan datos: orderId, bank_name, deposit_id, amount"
+      message: "Faltan datos: orderId, bank_name, deposit_id, amount",
     });
   }
 
@@ -35,7 +34,9 @@ const create = catchError(async (req, res) => {
 
   const exists = await Payments.findOne({ where: { orderId } });
   if (exists) {
-    return res.status(409).json({ message: "Esta orden ya tiene un pago registrado" });
+    return res
+      .status(409)
+      .json({ message: "Esta orden ya tiene un pago registrado" });
   }
 
   const result = await Payments.create({
@@ -47,9 +48,8 @@ const create = catchError(async (req, res) => {
     proof_url,
     is_validated: false,
     validated_at: null,
-    validated_by: null
+    validated_by: null,
   });
-
 
   // 🔵 Obtener evento para mostrar nombre en correo
   const event = await Events.findByPk(order.eventId);
@@ -112,13 +112,15 @@ const create = catchError(async (req, res) => {
 
         <br/>
 
-        <a href="mailto:soporte@northevents.com"
-           style="display:inline-block;margin:10px;padding:12px 24px;
-                  background-color:#3a0066;color:#ffffff;
-                  text-decoration:none;border-radius:6px;
-                  font-weight:bold;">
-          📞 Contactar Atención al Cliente
-        </a>
+<a href="https://wa.me/593997808994" 
+   target="_blank"
+   style="display:inline-block;margin:10px;padding:12px 24px;
+          background-color:#3a0066;color:#ffffff;
+          text-decoration:none;border-radius:6px;
+          font-weight:bold;">
+  📞 Contactar Atención al Cliente
+</a>
+
 
       </div>
 
@@ -131,23 +133,33 @@ const create = catchError(async (req, res) => {
     </div>
 
   </div>
-  `
+  `,
   });
 
-  const io = req.app.get("io");
-  if (io) {
-    io.to(`event:${order.eventId}`).emit("dashboard:update", {
-      type: "payment_created",
-      eventId: order.eventId,
-    });
-  }
-
+  emitDashboardUpdate(req, {
+    eventId: order.eventId,
+    type: "payment_validated",
+  });
 
   return res.status(201).json(result);
 });
 
 const getAll = catchError(async (req, res) => {
-  const results = await Payments.findAll({ order: [["createdAt", "DESC"]] });
+  const { trash } = req.query;
+
+  // trash=true => papelera => is_active=false
+  // default => activos => is_active=true
+  const isTrash = trash === "true";
+
+  const where = {
+    is_active: !isTrash, // activos(true) o papelera(false)
+  };
+
+  const results = await Payments.findAll({
+    where,
+    order: [["createdAt", "DESC"]],
+  });
+
   return res.json(results);
 });
 
@@ -158,14 +170,13 @@ const getOne = catchError(async (req, res) => {
   return res.json(result);
 });
 
-
-
 const update = catchError(async (req, res) => {
   const { id } = req.params;
 
   // 1) Traer pago ANTES
   const pagoAntes = await Payments.findByPk(id);
-  if (!pagoAntes) return res.status(404).json({ message: "Pago no encontrado" });
+  if (!pagoAntes)
+    return res.status(404).json({ message: "Pago no encontrado" });
 
   const wasValidated = !!pagoAntes.is_validated;
 
@@ -175,19 +186,22 @@ const update = catchError(async (req, res) => {
     bank_name,
     deposit_id,
     is_validated,
-    is_active,      // si agregaste este campo
-    validated_by,   // opcional
-    amount,         // si decides permitir editarlo
-    currency        // idem
+    is_active, // si agregaste este campo
+    validated_by, // opcional
+    amount, // si decides permitir editarlo
+    currency, // idem
   } = req.body;
 
   // Calculamos valores finales (como quedarán después)
   const finalIsValidated =
-    is_validated !== undefined ? (is_validated === true || is_validated === "true") : pagoAntes.is_validated;
+    is_validated !== undefined
+      ? is_validated === true || is_validated === "true"
+      : pagoAntes.is_validated;
 
-  const finalBankName = bank_name !== undefined ? bank_name : pagoAntes.bank_name;
-  const finalDepositId = deposit_id !== undefined ? deposit_id : pagoAntes.deposit_id;
-
+  const finalBankName =
+    bank_name !== undefined ? bank_name : pagoAntes.bank_name;
+  const finalDepositId =
+    deposit_id !== undefined ? deposit_id : pagoAntes.deposit_id;
 
   // ✅ Validación: banco + id depósito no pueden repetirse
   if (
@@ -206,7 +220,8 @@ const update = catchError(async (req, res) => {
 
     if (existe) {
       return res.status(400).json({
-        message: "Ya existe un pago registrado con ese comprobante (mismo banco e ID).",
+        message:
+          "Ya existe un pago registrado con ese comprobante (mismo banco e ID).",
       });
     }
   }
@@ -214,10 +229,14 @@ const update = catchError(async (req, res) => {
   // 3) Si están intentando VALIDAR (false->true), obligamos banco e id depósito
   if (!wasValidated && finalIsValidated) {
     if (!finalBankName || !String(finalBankName).trim()) {
-      return res.status(400).json({ message: "Para validar, debes registrar bank_name" });
+      return res
+        .status(400)
+        .json({ message: "Para validar, debes registrar bank_name" });
     }
     if (!finalDepositId || !String(finalDepositId).trim()) {
-      return res.status(400).json({ message: "Para validar, debes registrar deposit_id" });
+      return res
+        .status(400)
+        .json({ message: "Para validar, debes registrar deposit_id" });
     }
   }
 
@@ -235,10 +254,11 @@ const update = catchError(async (req, res) => {
         ? { validated_at: new Date(), validated_by: validated_by || null }
         : {}),
     },
-    { where: { id }, returning: true }
+    { where: { id }, returning: true },
   );
 
-  if (rows === 0) return res.status(404).json({ message: "Pago no encontrado" });
+  if (rows === 0)
+    return res.status(404).json({ message: "Pago no encontrado" });
 
   const pagoDespues = updated[0];
   const nowValidated = !!pagoDespues.is_validated;
@@ -263,15 +283,20 @@ const update = catchError(async (req, res) => {
           status: "unused",
         });
       }
-      const tickets = await Tickets.bulkCreate(arr, { transaction: t, returning: true });
+      const tickets = await Tickets.bulkCreate(arr, {
+        transaction: t,
+        returning: true,
+      });
       return tickets;
     });
 
     // 5.2 Generar QRs como archivos (recomendado para emails)
-    const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const baseUrl =
+      process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
 
     const ticketsDir = path.join(__dirname, "..", "..", "uploads", "tickets");
-    if (!fs.existsSync(ticketsDir)) fs.mkdirSync(ticketsDir, { recursive: true });
+    if (!fs.existsSync(ticketsDir))
+      fs.mkdirSync(ticketsDir, { recursive: true });
 
     const ticketCardsHtml = await Promise.all(
       createdTickets.map(async (tk, idx) => {
@@ -300,7 +325,7 @@ const update = catchError(async (req, res) => {
             </div>
           </div>
         `;
-      })
+      }),
     );
 
     // 5.3 Enviar email con entradas
@@ -332,29 +357,30 @@ const update = catchError(async (req, res) => {
               ${ticketCardsHtml.join("")}
             </div>
 
-            <div style="padding:18px 26px;text-align:center;background-color:#140032;">
-              <a href="mailto:soporte@northevents.com"
-                style="display:inline-block;margin:8px;padding:12px 22px;background-color:#3a0066;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">
-                📞 Contactar Atención al Cliente
-              </a>
-            </div>
+<div style="padding:18px 26px;text-align:center;background-color:#140032;">
+  <a href="https://wa.me/593997808994" 
+     target="_blank"
+     style="display:inline-block;margin:8px;padding:12px 22px;
+            background-color:#25D366;color:#ffffff;
+            text-decoration:none;border-radius:6px;
+            font-weight:bold;">
+    📞 Contactar Atención al Cliente
+  </a>
+</div>
+
 
             <div style="background-color:#0d0221;padding:18px;text-align:center;color:#888;font-size:12px;">
               © ${new Date().getFullYear()} NORTH EVENTS
             </div>
           </div>
         </div>
-      `
+      `,
     });
 
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`event:${order.eventId}`).emit("dashboard:update", {
-        type: "payment_validated",
-        eventId: order.eventId,
-      });
-    }
-
+    emitDashboardUpdate(req, {
+      eventId: order.eventId,
+      type: "payment_created",
+    });
 
     return res.json({
       message: "Pago actualizado, validado y tickets enviados",

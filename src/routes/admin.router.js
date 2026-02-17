@@ -1,5 +1,5 @@
 const express = require("express");
-const { getDashboard } = require("../controllers/adminDashboard.controllers");
+const { getDashboard, getDashboardEventsSummary } = require("../controllers/adminDashboard.controllers");
 const verifyJWT = require("../utils/verifyJWT");
 const verifyRoles = require("../utils/verifyRoles");
 
@@ -10,6 +10,13 @@ adminRouter.get(
   verifyJWT,
   verifyRoles(["admin"]),
   getDashboard
+);
+
+adminRouter.get(
+  "/admin/dashboard/events-summary",
+  verifyJWT,
+  verifyRoles(["admin"]),
+  getDashboardEventsSummary
 );
 
 module.exports = adminRouter;
