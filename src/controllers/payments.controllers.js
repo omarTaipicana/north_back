@@ -55,86 +55,133 @@ const create = catchError(async (req, res) => {
   const event = await Events.findByPk(order.eventId);
 
   // 📧 Enviar correo sencillo
-  await sendEmail({
-    to: order.buyer_email,
-    subject: "🎟️ Hemos recibido tu comprobante - NORTH EVENTS",
-    html: `
-  <div style="margin:0;padding:0;background-color:#0d0221;font-family:Arial,Helvetica,sans-serif;">
-    
-    <!-- Contenedor principal -->
-    <div style="max-width:600px;margin:0 auto;background-color:#140032;border-radius:12px;overflow:hidden;">
-      
-      <!-- Header con logo -->
-      <div style="background:linear-gradient(90deg,#1f0036,#3a0066);padding:30px;text-align:center;">
-        <img src="https://res.cloudinary.com/desgmhmg4/image/upload/v1771055860/north_logo_ghuajx.png"
-             alt="NORTH EVENTS"
-             style="width:180px;max-width:100%;" />
+await sendEmail({
+  to: order.buyer_email,
+  subject: "🎟️ Hemos recibido tu comprobante - NORTH EVENTS",
+  html: `
+<div style="margin:0;padding:0;background-color:#0d0221;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:650px;margin:0 auto;background-color:#140032;border-radius:14px;overflow:hidden;border:1px solid rgba(255,77,240,0.15);">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(90deg,#1f0036,#3a0066);padding:28px 20px;text-align:center;">
+      <img src="https://res.cloudinary.com/desgmhmg4/image/upload/v1771055860/north_logo_ghuajx.png"
+           alt="NORTH EVENTS"
+           style="width:180px;max-width:100%;display:inline-block;" />
+      <div style="margin-top:10px;color:#d7c9ff;font-size:12px;letter-spacing:0.6px;">
+        CONFIRMACIÓN DE RECEPCIÓN DE COMPROBANTE
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div style="padding:26px 24px;color:#ffffff;text-align:center;">
+      <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,77,240,0.12);border:1px solid rgba(255,77,240,0.25);color:#ff4df0;font-weight:bold;font-size:12px;">
+        ESTADO: PENDIENTE DE VALIDACIÓN
       </div>
 
-      <!-- Hero -->
-      <div style="padding:30px;color:#ffffff;text-align:center;">
-        <h2 style="margin:0;font-size:24px;color:#ff4df0;">
-          🎉 ¡Recibimos tu comprobante!
-        </h2>
-        <p style="margin-top:15px;font-size:16px;color:#cccccc;">
-          Hola <strong>${order.buyer_name}</strong>,
-        </p>
-        <p style="font-size:16px;line-height:1.6;color:#dddddd;">
-          Hemos recibido tu comprobante de pago para el evento:
-        </p>
-        <h3 style="margin:10px 0 20px 0;font-size:22px;color:#ffffff;">
-          ${event?.title || "Evento NORTH"}
-        </h3>
+      <h2 style="margin:16px 0 0 0;font-size:24px;color:#ff4df0;">
+        🎉 ¡Recibimos tu comprobante!
+      </h2>
+
+      <p style="margin:12px 0 0 0;font-size:16px;color:#cccccc;">
+        Hola <strong style="color:#ffffff;">${order.buyer_name}</strong>,
+      </p>
+
+      <p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#dddddd;">
+        Hemos recibido tu comprobante de pago para el evento:
+      </p>
+
+      <h3 style="margin:10px 0 0 0;font-size:20px;color:#ffffff;">
+        ${event?.title || "Evento NORTH"}
+      </h3>
+
+      <p style="margin:10px 0 0 0;font-size:14px;color:#c9c9c9;">
+        Localidades: <strong style="color:#ffffff;">${order.quantity || 1}</strong>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        Monto: <strong style="color:#ffffff;">$${amount} ${currency || "USD"}</strong>
+      </p>
+    </div>
+
+    <!-- Resumen -->
+    <div style="padding:0 22px 18px 22px;">
+      <div style="background:#1e0045;border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-weight:bold;color:#ff4df0;margin-bottom:10px;font-size:14px;">
+          🧾 Resumen de tu solicitud
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;color:#ffffff;font-size:14px;">
+          <tr>
+            <td style="padding:6px 0;color:#cfcfcf;">Orden</td>
+            <td style="padding:6px 0;text-align:right;font-family:monospace;">${order.id}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#cfcfcf;">Estado</td>
+            <td style="padding:6px 0;text-align:right;">
+              <span style="color:#ff4df0;font-weight:bold;">En validación</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#cfcfcf;">Localidades</td>
+            <td style="padding:6px 0;text-align:right;"><strong>${order.quantity || 1}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#cfcfcf;">Total</td>
+            <td style="padding:6px 0;text-align:right;"><strong>$${amount} ${currency || "USD"}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#cfcfcf;">Fecha</td>
+            <td style="padding:6px 0;text-align:right;">${new Date().toLocaleString("es-EC")}</td>
+          </tr>
+        </table>
+
+        <div style="margin-top:14px;color:#cccccc;font-size:13px;line-height:1.6;">
+          ⏳ Nuestro equipo validará tu pago en breve.  
+          Una vez validado, te enviaremos tus entradas digitales con código QR a este mismo correo.
+        </div>
       </div>
 
-      <!-- Detalles -->
-      <div style="background-color:#1e0045;padding:25px;color:#ffffff;">
-        <p><strong>Monto:</strong> $${amount}</p>
-        <p style="margin-top:15px;color:#ff4df0;">
-          ⏳ Nuestro equipo validará tu pago en breve.
-        </p>
-        <p style="font-size:14px;color:#cccccc;">
-          Una vez validado, recibirás tus entradas digitales con código QR por este mismo correo.
-        </p>
-      </div>
-
-      <!-- Botones -->
-      <div style="padding:30px;text-align:center;background-color:#140032;">
-        
-        <a href="${proof_url}" 
-           target="_blank"
-           style="display:inline-block;margin:10px;padding:12px 24px;
-                  background-color:#ff4df0;color:#ffffff;
-                  text-decoration:none;border-radius:6px;
-                  font-weight:bold;">
-          🔎 Ver mi comprobante
-        </a>
-
+      <!-- Importante -->
+      <div style="margin-top:14px;padding:14px 14px;border-radius:12px;
+                  background:rgba(255,77,240,0.10);
+                  border:1px solid rgba(255,77,240,0.30);
+                  color:#ffffff;font-size:13px;line-height:1.55;text-align:center;">
+        <strong style="color:#ff4df0;">IMPORTANTE:</strong>
+        El QR de ingreso se envía <strong>solo después</strong> de validar el pago.
         <br/>
-
-<a href="https://wa.me/593997808994" 
-   target="_blank"
-   style="display:inline-block;margin:10px;padding:12px 24px;
-          background-color:#3a0066;color:#ffffff;
-          text-decoration:none;border-radius:6px;
-          font-weight:bold;">
-  📞 Contactar Atención al Cliente
-</a>
-
-
+        Si tu comprobante no es legible o falta información, te contactaremos.
       </div>
+    </div>
 
-      <!-- Footer -->
-      <div style="background-color:#0d0221;padding:20px;text-align:center;color:#888;font-size:12px;">
-        © ${new Date().getFullYear()} NORTH EVENTS<br/>
-        Vive la experiencia. Siente la música.
+    <!-- Botones -->
+    <div style="padding:22px;text-align:center;background-color:#140032;">
+      <a href="${proof_url}" target="_blank"
+         style="display:inline-block;margin:8px;padding:12px 24px;
+                background-color:#ff4df0;color:#ffffff;
+                text-decoration:none;border-radius:8px;font-weight:bold;">
+        🔎 Ver mi comprobante
+      </a>
+
+      <a href="https://wa.me/593997808994" target="_blank"
+         style="display:inline-block;margin:8px;padding:12px 24px;
+                background-color:#3a0066;color:#ffffff;
+                text-decoration:none;border-radius:8px;font-weight:bold;">
+        📞 Atención al Cliente
+      </a>
+
+      <div style="margin-top:10px;color:#9b8fd6;font-size:12px;">
+        Responde a este correo si necesitas corregir datos de tu compra.
       </div>
+    </div>
 
+    <!-- Footer -->
+    <div style="background-color:#0d0221;padding:18px;text-align:center;color:#888;font-size:12px;">
+      © ${new Date().getFullYear()} NORTH EVENTS<br/>
+      Vive la experiencia. Siente la música.
     </div>
 
   </div>
-  `,
-  });
+</div>
+`,
+});
 
   emitDashboardUpdate(req, {
     eventId: order.eventId,
@@ -308,23 +355,35 @@ const update = catchError(async (req, res) => {
         const qrUrl = `${baseUrl}/uploads/tickets/${tk.code}.png`;
 
         return `
-          <div style="background:#1e0045;border-radius:10px;padding:16px;margin:12px 0;color:#fff;">
-            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;">
-              <div style="text-align:center;">
-                <div style="font-weight:bold;color:#ff4df0;margin-bottom:6px;">ENTRADA #${idx + 1}</div>
-                <img src="${qrUrl}" alt="QR Ticket"
-                  style="width:200px;max-width:100%;border-radius:8px;background:#fff;padding:8px;" />
-              </div>
-              <div style="min-width:220px;">
-                <div style="font-size:14px;color:#ccc;">Código:</div>
-                <div style="font-family:monospace;word-break:break-all;">${tk.code}</div>
-                <div style="margin-top:10px;font-size:13px;color:#ccc;">
-                  En puerta, muestra este QR al staff para registrar tu ingreso.
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+  <div style="background:#1e0045;border-radius:12px;padding:18px;margin:14px 0;color:#fff;">
+    <div style="text-align:center;">
+      <div style="font-weight:bold;color:#ff4df0;margin-bottom:10px;font-size:15px;">
+        ENTRADA #${idx + 1}
+      </div>
+
+      <img src="${qrUrl}" alt="QR Ticket"
+        style="width:220px;max-width:100%;border-radius:10px;background:#fff;padding:10px;" />
+
+      <div style="margin-top:12px;font-size:13px;color:#ccc;">
+        Código:
+      </div>
+      <div style="font-family:monospace;word-break:break-all;font-size:13px;color:#ffffff;">
+        ${tk.code}
+      </div>
+
+      <div style="margin-top:14px;padding:12px 14px;border-radius:10px;
+                  background:rgba(255,77,240,0.12);border:1px solid rgba(255,77,240,0.35);
+                  color:#ffffff;font-size:14px;line-height:1.5;">
+        <strong style="color:#ff4df0;">IMPORTANTE:</strong>
+        El día del evento debes <strong>presentar este QR</strong> en la entrada para registrar tu ingreso.
+        <br/>
+        <span style="color:#cccccc;font-size:13px;">
+          Puedes mostrarlo desde tu celular o impreso. No compartas tu QR con terceros.
+        </span>
+      </div>
+    </div>
+  </div>
+`;
       }),
     );
 
