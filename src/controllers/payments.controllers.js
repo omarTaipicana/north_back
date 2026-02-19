@@ -202,10 +202,18 @@ const getAll = catchError(async (req, res) => {
     is_active: !isTrash, // activos(true) o papelera(false)
   };
 
-  const results = await Payments.findAll({
-    where,
-    order: [["createdAt", "DESC"]],
-  });
+const results = await Payments.findAll({
+  where,
+  include: [
+    {
+      model: Orders,
+      required: false,
+      attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "eventId"],
+    },
+  ],
+  order: [["createdAt", "DESC"]],
+});
+
 
   return res.json(results);
 });
