@@ -1,46 +1,73 @@
 const catchError = require("../utils/catchError");
 const Tickets = require("../models/Tickets");
 const Events = require("../models/Events");
-const Orders = require("../models/Orders");     // ✅
+const Orders = require("../models/Orders");
 const StaffUser = require("../models/StaffUser");
 
-const pickBuyerAndOrder = (order) => {
-  if (!order) return { buyer: null, orderInfo: null };
+const pick = (...vals) => vals.find(v => v !== undefined && v !== null);
 
-  const buyer = {
-    name: order.buyer_name ?? null,
-    email: order.buyer_email ?? null,
-    phone: order.buyer_phone ?? null,
+const buildBuyer = (order) => {
+  if (!order) return null;
+  return {
+    name: order.buyer_name || null,
+    email: order.buyer_email || null,
+    phone: order.buyer_phone || null,
   };
+};
 
-  const orderInfo = {
-    id: order.id ?? null,
+const buildOrderInfo = (order, event) => {
+  if (!order) return null;
+  const qty = Number(order.quantity || 0);
+  const unit = Number(event?.price || 0);
+  const total = qty && unit ? Number((qty * unit).toFixed(2)) : null;
+
+  return {
+    id: order.id || null,
     quantity: order.quantity ?? null,
-    total: order.total ?? null, // si no tienes total en Orders, puedes omitirlo
+    status: order.status || null,
+    unit_price: event?.price ?? null,
+    total, // ✅ calculado (no depende de columna)
   };
+};
 
-  return { buyer, orderInfo };
+const buildEventInfo = (event, fallbackEventId) => ({
+  id: event?.id || fallbackEventId || null,
+  title: event?.title || null,
+  venue: event?.venue || null,
+  city: event?.city || null,
+  starts_at: event?.starts_at || null,
+});
+
+const buildTicketInfo = (ticket) => ({
+  id: ticket?.id || null,
+  code: ticket?.code || null,
+  status: ticket?.status || null,
+  used_at: ticket?.used_at || null,
+  gate: ticket?.gate || null,
+  used_by: ticket?.used_by || null,
+  eventId: ticket?.eventId || null,
+  orderId: ticket?.orderId || null,
+});
+
+const buildStaffInfo = (staff) => {
+  if (!staff) return null;
+  return {
+    id: staff.id,
+    full_name: staff.full_name || null,
+    email: staff.email || null,
+    role: staff.role || null,
+  };
 };
 
 const checkin = catchError(async (req, res) => {
   const { code, gate } = req.body;
   if (!code) return res.status(400).json({ message: "Falta code" });
 
-  // 1) Buscar ticket (incluye orderId si existe la relación)
-  const ticket = await Tickets.findOne({
-    where: { code },
-    include: [
-      {
-        model: Orders,
-        required: false,
-        attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "total", "createdAt"],
-      },
-    ],
-  });
-
+  // 1) buscar ticket
+  const ticket = await Tickets.findOne({ where: { code } });
   if (!ticket) return res.status(404).json({ message: "Ticket no encontrado" });
 
-  // 2) Validar evento
+  // 2) evento
   const event = await Events.findByPk(ticket.eventId);
   if (!event) return res.status(404).json({ message: "Evento no encontrado" });
   if (!event.is_active) return res.status(403).json({ message: "Evento inactivo" });
@@ -53,12 +80,18 @@ const checkin = catchError(async (req, res) => {
     return res.status(403).json({ message: "Check-in cerrado" });
   }
 
-  // 3) ATÓMICO
-  const [rowsUpdated] = await Tickets.update(
+  // 3) buscar orden (si tienes ticket.orderId)
+  let order = null;
+  if (ticket.orderId) {
+    order = await Orders.findByPk(ticket.orderId);
+  }
+
+  // 4) update atómico
+  const [rowsUpdated, updated] = await Tickets.update(
     {
       status: "used",
       used_at: new Date(),
-      used_by: req.user.id, // staff id del JWT
+      used_by: req.user.id,
       gate: gate || null,
     },
     {
@@ -67,130 +100,53 @@ const checkin = catchError(async (req, res) => {
     }
   );
 
-  // helper: arma buyer/order desde la orden incluida
-  const orderFromTicket = ticket.Order || ticket.order || null;
-  const { buyer, orderInfo } = pickBuyerAndOrder(orderFromTicket);
-
-  // Si no se actualizó, es porque ya estaba used/void
+  // ya usado / void
   if (rowsUpdated === 0) {
-    // 🔥 vuelve a traer ticket + order para mostrar comprador igual en error
-    const fresh = await Tickets.findByPk(ticket.id, {
-      include: [
-        {
-          model: Orders,
-          required: false,
-          attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "total", "createdAt"],
-        },
-      ],
-    });
+    const fresh = await Tickets.findByPk(ticket.id);
 
-    const ordFresh = fresh?.Order || fresh?.order || null;
-    const picked = pickBuyerAndOrder(ordFresh);
+    // orden (si existe)
+    let freshOrder = null;
+    if (fresh?.orderId) {
+      freshOrder = await Orders.findByPk(fresh.orderId);
+    }
 
-    // staff si existe used_by
-    let staffInfo = null;
+    // staff que lo registró antes
+    let usedByStaff = null;
     if (fresh?.used_by) {
       const staff = await StaffUser.findByPk(fresh.used_by, {
         attributes: ["id", "full_name", "email", "role"],
       });
-      if (staff) staffInfo = staff;
-    }
-
-    // responde con payload completo
-    if (fresh?.status === "used") {
-      return res.status(409).json({
-        message: "Entrada ya fue utilizada",
-        ticket: {
-          id: fresh.id,
-          code: fresh.code,
-          status: fresh.status,
-          used_at: fresh.used_at,
-          gate: fresh.gate,
-          used_by: fresh.used_by,
-        },
-        buyer: picked.buyer,
-        order: picked.orderInfo,
-        event: {
-          id: event.id,
-          title: event.title,
-          venue: event.venue,
-          city: event.city || null,
-          starts_at: event.starts_at,
-        },
-        staff: staffInfo,
-      });
+      usedByStaff = buildStaffInfo(staff);
     }
 
     return res.status(409).json({
-      message: `Entrada no válida (status: ${fresh?.status})`,
-      ticket: {
-        id: fresh?.id,
-        code: fresh?.code,
-        status: fresh?.status,
-        used_at: fresh?.used_at || null,
-        gate: fresh?.gate || null,
-        used_by: fresh?.used_by || null,
-      },
-      buyer: picked.buyer,
-      order: picked.orderInfo,
-      event: {
-        id: event.id,
-        title: event.title,
-        venue: event.venue,
-        city: event.city || null,
-        starts_at: event.starts_at,
-      },
-      staff: staffInfo,
+      message:
+        fresh?.status === "used"
+          ? "Entrada ya fue utilizada"
+          : `Entrada no válida (status: ${fresh?.status})`,
+
+      ticket: buildTicketInfo(fresh),
+      event: buildEventInfo(event, fresh?.eventId),
+      buyer: buildBuyer(freshOrder),
+      order: buildOrderInfo(freshOrder, event),
+      used_by_staff: usedByStaff,
     });
   }
 
-  // ✅ éxito: vuelve a traer el ticket YA actualizado (con order incluido)
-  const saved = await Tickets.findByPk(ticket.id, {
-    include: [
-      {
-        model: Orders,
-        required: false,
-        attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "total", "createdAt"],
-      },
-    ],
-  });
-
-  const ordSaved = saved?.Order || saved?.order || null;
-  const pickedSaved = pickBuyerAndOrder(ordSaved);
-
-  const io = req.app.get("io");
-  if (io) {
-    io.to(`event:${ticket.eventId}`).emit("dashboard:update", {
-      type: "checkin",
-      eventId: ticket.eventId,
-    });
-  }
+  const updatedTicket = updated?.[0] || null;
 
   return res.json({
     message: "✅ Check-in exitoso",
-    ticket: {
-      id: saved.id,
-      code: saved.code,
-      status: saved.status,
-      used_at: saved.used_at,
-      gate: saved.gate,
-      used_by: saved.used_by,
-    },
-    buyer: pickedSaved.buyer,
-    order: pickedSaved.orderInfo,
-    event: {
-      id: event.id,
-      title: event.title,
-      venue: event.venue,
-      city: event.city || null,
-      starts_at: event.starts_at,
-    },
-    // si quieres también devolver staff actual (quien hizo checkin)
+    ticket: buildTicketInfo(updatedTicket),
+    event: buildEventInfo(event, ticket.eventId),
+    buyer: buildBuyer(order),
+    order: buildOrderInfo(order, event),
+
+    // operador actual (opcional)
     staff: {
       id: req.user.id,
-      full_name: req.user.full_name || req.user.fullName || null,
+      full_name: req.user.full_name || null,
       role: req.user.role || null,
-      email: req.user.email || null,
     },
   });
 });
