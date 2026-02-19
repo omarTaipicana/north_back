@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const getPublicTicket = catchError(async (req, res) => {
   const { code } = req.params;
 
-  // ✅ Traemos ticket + orden + staff (si existen relaciones)
+  // ✅ Ticket + Order + Staff (quien lo marcó "used")
   const ticket = await Tickets.findOne({
     where: { code },
     include: [
@@ -18,7 +18,9 @@ const getPublicTicket = catchError(async (req, res) => {
       },
       {
         model: StaffUser,
+        as: "usedByStaff", // ✅ alias de la asociación por used_by
         required: false,
+        attributes: ["id", "full_name", "email", "role"], // opcional
       },
     ],
   });
@@ -33,66 +35,44 @@ const getPublicTicket = catchError(async (req, res) => {
   // ✅ Evento
   const event = await Events.findByPk(ticket.eventId);
 
-  // 🔎 Verificar si viene token (staff)
+  // 🔎 Verificar token (si es staff lo redirigimos al scanner)
   const authHeader = req.headers.authorization || req.headers.Authorization;
-
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
-
     try {
       const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-
       if (["admin", "validator", "scanner"].includes(decoded.user.role)) {
-        // 🔥 Si es staff → redirigir al scanner
-        return res.json({
-          redirect: `/staff/scanner?code=${code}`,
-        });
+        return res.json({ redirect: `/staff/scanner?code=${code}` });
       }
-    } catch (err) {
-      // Token inválido → continuar como público
+    } catch {
+      // token inválido => seguir como público
     }
   }
 
-  // ✅ Intentar detectar la orden incluida (depende de tus asociaciones)
-  const order =
-    ticket.order || ticket.Order || ticket.orden || ticket.Orden || null;
+  // ✅ Order incluido (depende del nombre que Sequelize te ponga)
+  const order = ticket.order || ticket.Order || null;
 
-  // ✅ Intentar detectar staff incluido (depende de tus asociaciones)
-  const staff =
-    ticket.staff || ticket.StaffUser || ticket.staffUser || null;
+  // ✅ Staff incluido por alias
+  const usedByStaff = ticket.usedByStaff || null;
 
-  // ✅ Armar comprador (si existe order)
+  // ✅ Buyer
   const buyer = order
     ? {
-        name:
-          order.buyer_name ||
-          order.buyerName ||
-          order.nombre ||
-          order.nombres ||
-          null,
-        email:
-          order.buyer_email ||
-          order.buyerEmail ||
-          order.email ||
-          null,
-        phone:
-          order.buyer_phone ||
-          order.buyerPhone ||
-          order.telefono ||
-          null,
+        name: order.buyer_name ?? null,
+        email: order.buyer_email ?? null,
+        phone: order.buyer_phone ?? null,
       }
     : null;
 
-  // ✅ Armar resumen orden (si existe)
+  // ✅ Order info (SIN total porque tu tabla orders no tiene esa columna)
   const orderInfo = order
     ? {
-        id: order.id || null,
-        quantity: order.quantity ?? order.cantidad ?? null,
-        total: order.total ?? order.amount ?? order.monto ?? null,
+        id: order.id ?? null,
+        quantity: order.quantity ?? null,
+        status: order.status ?? null,
       }
     : null;
 
-  // 👤 Respuesta pública AMPLIADA
   return res.json({
     status: ticket.status,
     message:
@@ -105,26 +85,28 @@ const getPublicTicket = catchError(async (req, res) => {
     ticket: {
       id: ticket.id,
       code: ticket.code,
-      gate: ticket.gate || null,     // si tienes ese campo
+      gate: ticket.gate || null,
       used_at: ticket.used_at || null,
     },
 
-    buyer,        // ✅ comprador
-    order: orderInfo, // ✅ orden (cantidad/total)
+    buyer,
+    order: orderInfo,
 
     event: {
       id: event?.id || ticket.eventId,
-      title: event?.title,
-      venue: event?.venue,
+      title: event?.title || null,
+      venue: event?.venue || null,
       city: event?.city || null,
-      starts_at: event?.starts_at,
+      starts_at: event?.starts_at || null,
     },
 
-    staff: staff
+    // ✅ quien registró el ingreso (cuando status = used)
+    used_by_staff: usedByStaff
       ? {
-          id: staff.id,
-          full_name: staff.full_name || staff.fullName || null,
-          role: staff.role || null,
+          id: usedByStaff.id,
+          full_name: usedByStaff.full_name || null,
+          email: usedByStaff.email || null,
+          role: usedByStaff.role || null,
         }
       : null,
   });

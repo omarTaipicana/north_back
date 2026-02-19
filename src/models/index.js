@@ -18,3 +18,6 @@ Orders.hasMany(Tickets);
 // Events -> Tickets (un evento tiene muchas entradas)
 Tickets.belongsTo(Events);
 Events.hasMany(Tickets);
+
+Tickets.belongsTo(StaffUser, { foreignKey: "used_by", as: "usedByStaff" });
+StaffUser.hasMany(Tickets, { foreignKey: "used_by", as: "usedTickets" });
