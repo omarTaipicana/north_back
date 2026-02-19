@@ -1,6 +1,7 @@
 const Events = require("./Events");
 const Orders = require("./Orders");
 const Payments = require("./Payments");
+const StaffUser = require("./StaffUser");
 const Tickets = require("./Tickets");
 
 
