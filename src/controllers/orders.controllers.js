@@ -1,5 +1,8 @@
-const catchError = require('../utils/catchError');
-const Orders = require('../models/Orders');
+const catchError = require("../utils/catchError");
+const Orders = require("../models/Orders");
+const Tickets = require("../models/Tickets");
+const Events = require("../models/Events");
+const generateTicketsPdf = require("../utils/generateTicketsPdf");
 
 const getAll = catchError(async(req, res) => {
     const results = await Orders.findAll();
@@ -57,10 +60,41 @@ const update = catchError(async(req, res) => {
     return res.json(result[1][0]);
 });
 
+const downloadOrderTicketsPdf = catchError(async (req, res) => {
+  const { orderId } = req.params;
+
+  const order = await Orders.findByPk(orderId);
+  if (!order) return res.status(404).json({ message: "Orden no existe" });
+
+  const tickets = await Tickets.findAll({ where: { orderId } });
+  if (!tickets.length) {
+    return res.status(404).json({ message: "No hay tickets para esta orden" });
+  }
+
+  const event = await Events.findByPk(order.eventId);
+
+  const baseUrl = process.env.FRONT_URL || "https://northeventos.com"; // pon tu dominio
+
+  const pdfBuffer = await generateTicketsPdf({
+    order,
+    tickets,
+    event,
+    baseUrl,
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="tickets_${orderId}.pdf"`
+  );
+  res.send(pdfBuffer);
+});
+
 module.exports = {
     getAll,
     create,
     getOne,
     remove,
-    update
+    update,
+    downloadOrderTicketsPdf,
 };
