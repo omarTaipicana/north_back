@@ -49,11 +49,13 @@ async function generateTicketsPdf({ order, tickets, event, baseUrl }) {
     qr: { x: 324, y: 287, size: 230 },
   };
 
-  const fechaTxt = event?.starts_at
-    ? new Intl.DateTimeFormat("es-EC", { dateStyle: "short", timeStyle: "medium" }).format(
-        new Date(event.starts_at)
-      )
-    : "—";
+const fechaTxt = event?.starts_at
+  ? new Intl.DateTimeFormat("es-EC", {
+      dateStyle: "short",
+      timeStyle: "medium",
+      timeZone: "America/Guayaquil",
+    }).format(new Date(event.starts_at))
+  : "—";
 
   for (let i = 0; i < tickets.length; i++) {
     const t = tickets[i];
