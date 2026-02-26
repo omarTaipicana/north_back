@@ -1,93 +1,107 @@
-const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 const QRCode = require("qrcode");
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
 async function generateTicketsPdf({ order, tickets, event, baseUrl }) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: "A4", margin: 40 });
-      const chunks = [];
+  // Plantilla por ID del evento
+  const templatePath = path.join(
+    process.cwd(),
+    "uploads",
+    "template_ticket",
+    `${event.id}.pdf`
+  );
 
-      doc.on("data", (c) => chunks.push(c));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`No existe la plantilla: ${templatePath}`);
+  }
 
-      for (let i = 0; i < tickets.length; i++) {
-        const t = tickets[i];
+  const templateBytes = fs.readFileSync(templatePath);
+  const templatePdf = await PDFDocument.load(templateBytes);
 
-        if (i > 0) doc.addPage();
+  const outPdf = await PDFDocument.create();
+  const fontReg = await outPdf.embedFont(StandardFonts.Helvetica);
+  const fontBold = await outPdf.embedFont(StandardFonts.HelveticaBold);
 
-        // URL que abrirá el QR (tu TicketStatus)
-        const ticketUrl = `${baseUrl}/ticket/${encodeURIComponent(t.code)}`;
+  // Colores (modelo)
+  const purple = rgb(1, 0.302, 0.941); // aprox #ff4df0
+  const black = rgb(0.05, 0.05, 0.08);
 
-        // QR como DataURL PNG
-        const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
-          errorCorrectionLevel: "H",
-          margin: 1,
-          scale: 8,
-        });
+  // --- Coordenadas exactas del MODELO (A4 595 x 842) ---
+  // PDF-lib usa origen abajo-izquierda (0,0).
+  const POS = {
+    eventTitle: { x: 44, y: 842 - 440.94, size: 14, font: fontReg, color: black },
 
-        const qrBase64 = qrDataUrl.split(",")[1];
-        const qrBuffer = Buffer.from(qrBase64, "base64");
+    venue: { x: 44, y: 842 - 462.34, size: 11, font: fontReg, color: black },
+    date: { x: 44, y: 842 - 479.34, size: 11, font: fontReg, color: black },
 
-        // ===== Estilo “entrada” simple (puedes afinar para copiar tu correo) =====
-        doc
-          .roundedRect(40, 40, 515, 760, 16)
-          .lineWidth(2)
-          .stroke("#ff4df0");
+    buyer: { x: 44, y: 842 - 512.34, size: 11, font: fontReg, color: black },
+    email: { x: 44, y: 842 - 529.33, size: 11, font: fontReg, color: black },
+    order: { x: 44, y: 842 - 546.33, size: 11, font: fontReg, color: black },
 
-        doc.fontSize(22).fillColor("#140032").text("NORTH EVENTS", 60, 65, {
-          align: "left",
-        });
+    codeLabel: { x: 60, y: 842 - 634.43, size: 12, font: fontReg, color: purple },
+    codeValue: { x: 60, y: 842 - 656.82, size: 14, font: fontReg, color: black },
 
-        doc.fontSize(14).fillColor("#0b0320").text(event?.title || "Evento", 60, 100);
+    hint: { x: 60, y: 842 - 688.23, size: 11, font: fontReg, color: rgb(0.35, 0.35, 0.35) },
+    pageNum: { x: 60, y: 842 - 736.98, size: 10, font: fontReg, color: rgb(0.45, 0.45, 0.45) },
 
-        doc
-          .fontSize(11)
-          .fillColor("#333")
-          .text(`Lugar: ${event?.venue || "—"}`, 60, 125)
-          .text(
-            `Fecha: ${
-              event?.starts_at ? new Date(event.starts_at).toLocaleString("es-EC") : "—"
-            }`,
-            60,
-            142
-          );
+    // QR (bbox detectado del modelo)
+    qr: { x: 324, y: 287, size: 230 },
+  };
 
-        doc
-          .fontSize(11)
-          .fillColor("#333")
-          .text(`Comprador: ${order?.buyer_name || "—"}`, 60, 175)
-          .text(`Email: ${order?.buyer_email || "—"}`, 60, 192)
-          .text(`Orden: ${order?.id}`, 60, 209);
+  const fechaTxt = event?.starts_at
+    ? new Intl.DateTimeFormat("es-EC", { dateStyle: "short", timeStyle: "medium" }).format(
+        new Date(event.starts_at)
+      )
+    : "—";
 
-        // QR centrado
-        doc.image(qrBuffer, 170, 270, { width: 260 });
+  for (let i = 0; i < tickets.length; i++) {
+    const t = tickets[i];
 
-        doc
-          .fontSize(12)
-          .fillColor("#140032")
-          .text("Código de Ticket", 60, 560);
+    // copiar página 0 del template por cada ticket
+    const [page] = await outPdf.copyPages(templatePdf, [0]);
+    outPdf.addPage(page);
 
-        doc
-          .fontSize(14)
-          .fillColor("#0b0320")
-          .text(t.code, 60, 580);
+    // URL del QR
+    const ticketUrl = `${baseUrl}/ticket/${encodeURIComponent(t.code)}`;
 
-        doc
-          .fontSize(11)
-          .fillColor("#555")
-          .text("Presenta este QR en el ingreso.", 60, 615);
+    // QR PNG
+    const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
+      errorCorrectionLevel: "H",
+      margin: 1,
+      scale: 8,
+    });
+    const qrBase64 = qrDataUrl.split(",")[1];
+    const qrBytes = Buffer.from(qrBase64, "base64");
+    const qrImg = await outPdf.embedPng(qrBytes);
 
-        doc
-          .fontSize(10)
-          .fillColor("#777")
-          .text(`Ticket ${i + 1} de ${tickets.length}`, 60, 735);
-      }
+    // --- Dibujar QR ---
+    page.drawImage(qrImg, {
+      x: POS.qr.x,
+      y: POS.qr.y,
+      width: POS.qr.size,
+      height: POS.qr.size,
+    });
 
-      doc.end();
-    } catch (err) {
-      reject(err);
-    }
-  });
+    // --- Dibujar textos (igual al modelo) ---
+    page.drawText(String(event?.title || "Evento"), POS.eventTitle);
+
+    page.drawText(`Lugar: ${event?.venue || "—"}`, POS.venue);
+    page.drawText(`Fecha: ${fechaTxt}`, POS.date);
+
+    page.drawText(`Comprador: ${order?.buyer_name || "—"}`, POS.buyer);
+    page.drawText(`Email: ${order?.buyer_email || "—"}`, POS.email);
+    page.drawText(`Orden: ${order?.id || "—"}`, POS.order);
+
+    page.drawText("Código de Ticket", POS.codeLabel);
+    page.drawText(String(t.code), POS.codeValue);
+
+    page.drawText("Presenta este QR en el ingreso.", POS.hint);
+    page.drawText(`Ticket ${i + 1} de ${tickets.length}`, POS.pageNum);
+  }
+
+  const bytes = await outPdf.save();
+  return Buffer.from(bytes);
 }
 
 module.exports = generateTicketsPdf;
