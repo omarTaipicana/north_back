@@ -65,7 +65,7 @@ const create = catchError(async (req, res) => {
     <!-- Imagen -->
     <div style="background:linear-gradient(135deg,#7a2e12,#c85d20);">
       <img
-        src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784248773/hornado_c65n2g.png"
+        src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784256827/hornado_u9yqnq.png"
         alt="Hornado"
         style="width:100%;display:block;"
       />
@@ -214,7 +214,7 @@ const create = catchError(async (req, res) => {
 
       </a>
 
-      <a href="https://wa.me/593997808994"
+      <a href="https://wa.me/593998830670"
          target="_blank"
          style="display:inline-block;
                 margin:8px;
@@ -521,7 +521,7 @@ const update = catchError(async (req, res) => {
         <!-- IMAGEN PRINCIPAL -->
         <div style="background:linear-gradient(135deg,#7a2e12,#c65b1e);padding:0;text-align:center;">
           <img
-            src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784248773/hornado_c65n2g.png"
+            src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784256827/hornado_u9yqnq.png"
             alt="Hornado ecuatoriano"
             style="display:block;width:100%;max-width:650px;height:auto;border:0;"
           />
@@ -609,7 +609,7 @@ const update = catchError(async (req, res) => {
           </p>
 
           <a
-            href="https://wa.me/593997808994"
+            href="https://wa.me/593998830670"
             target="_blank"
             style="display:inline-block;padding:13px 24px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;"
           >
