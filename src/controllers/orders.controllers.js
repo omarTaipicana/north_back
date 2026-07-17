@@ -73,7 +73,7 @@ const downloadOrderTicketsPdf = catchError(async (req, res) => {
 
   const event = await Events.findByPk(order.eventId);
 
-  const baseUrl = process.env.FRONT_URL || "https://kafersolucionesweb.com"; // pon tu dominio
+  const baseUrl = process.env.FRONT_URL || "https://mr-hornado.kafers"; // pon tu dominio
 
   const pdfBuffer = await generateTicketsPdf({
     order,
