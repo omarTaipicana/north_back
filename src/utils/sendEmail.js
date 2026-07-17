@@ -16,7 +16,7 @@ const sendEmail = (options) => new Promise((resolve, reject) => {
     });
 
     const mailOptions = {
-        from: `"Hornado" <noreply@mr-hornado.kafers>`,
+        from: `"Hornado" <noreply@kafersolucionesweb.com>`,
         ...options,
     };
     transporter.sendMail(mailOptions, (error, info) => {
