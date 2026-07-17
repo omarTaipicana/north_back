@@ -413,7 +413,7 @@ const update = catchError(async (req, res) => {
 
     const ticketCardsHtml = await Promise.all(
       createdTickets.map(async (tk, idx) => {
-        const ticketUrl = `https://mr-hornado.kafers/ticket/${tk.code}`;
+        const ticketUrl = `https://mr-hornado.kafersolucionesweb.com/ticket/${tk.code}`;
         const qrFilePath = path.join(ticketsDir, `${tk.code}.png`);
 
         await QRCode.toFile(qrFilePath, ticketUrl, { width: 300, margin: 1 });
