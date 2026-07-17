@@ -55,133 +55,191 @@ const create = catchError(async (req, res) => {
   const event = await Events.findByPk(order.eventId);
 
   // 📧 Enviar correo sencillo
-await sendEmail({
-  to: order.buyer_email,
-  subject: "🎟️ Hemos recibido tu comprobante - NORTH EVENTS",
-  html: `
-<div style="margin:0;padding:0;background-color:#0d0221;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:650px;margin:0 auto;background-color:#140032;border-radius:14px;overflow:hidden;border:1px solid rgba(255,77,240,0.15);">
+  await sendEmail({
+    to: order.buyer_email,
+    subject: "🍖 Hemos recibido tu comprobante - Pedido de Hornado",
+    html: `
+<div style="margin:0;padding:0;background:#fff4df;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:650px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(120,60,20,.18);">
 
-    <!-- Header -->
-    <div style="background:linear-gradient(90deg,#1f0036,#3a0066);padding:28px 20px;text-align:center;">
-      <img src="https://res.cloudinary.com/desgmhmg4/image/upload/v1771055860/north_logo_ghuajx.png"
-           alt="NORTH EVENTS"
-           style="width:180px;max-width:100%;display:inline-block;" />
-      <div style="margin-top:10px;color:#d7c9ff;font-size:12px;letter-spacing:0.6px;">
-        CONFIRMACIÓN DE RECEPCIÓN DE COMPROBANTE
-      </div>
+    <!-- Imagen -->
+    <div style="background:linear-gradient(135deg,#7a2e12,#c85d20);">
+      <img
+        src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784248773/hornado_c65n2g.png"
+        alt="Hornado"
+        style="width:100%;display:block;"
+      />
     </div>
 
-    <!-- Hero -->
-    <div style="padding:26px 24px;color:#ffffff;text-align:center;">
-      <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,77,240,0.12);border:1px solid rgba(255,77,240,0.25);color:#ff4df0;font-weight:bold;font-size:12px;">
-        ESTADO: PENDIENTE DE VALIDACIÓN
+    <!-- Encabezado -->
+    <div style="padding:28px 24px;text-align:center;background:#fffaf2;">
+
+      <div style="display:inline-block;padding:8px 16px;border-radius:30px;
+                  background:#fff0c7;
+                  border:1px solid #f3c765;
+                  color:#8a420d;
+                  font-weight:bold;
+                  font-size:13px;">
+        ⏳ PAGO EN VALIDACIÓN
       </div>
 
-      <h2 style="margin:16px 0 0 0;font-size:24px;color:#ff4df0;">
-        🎉 ¡Recibimos tu comprobante!
+      <h2 style="margin:18px 0 8px;color:#7a2e12;font-size:30px;">
+        🍖 ¡Recibimos tu comprobante!
       </h2>
 
-      <p style="margin:12px 0 0 0;font-size:16px;color:#cccccc;">
-        Hola <strong style="color:#ffffff;">${order.buyer_name}</strong>,
+      <p style="margin:0;font-size:16px;color:#6d5548;">
+        Hola <strong>${order.buyer_name}</strong>,
       </p>
 
-      <p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#dddddd;">
-        Hemos recibido tu comprobante de pago para el evento:
+      <p style="margin:14px 0 0;color:#6d5548;font-size:15px;line-height:1.6;">
+        Hemos recibido correctamente tu comprobante de pago para tu pedido de hornado.
       </p>
 
-      <h3 style="margin:10px 0 0 0;font-size:20px;color:#ffffff;">
-        ${event?.title || "Evento NORTH"}
+      <h3 style="margin:16px 0 0;color:#8f3608;font-size:22px;">
+        ${event?.title || "Venta de Hornado"}
       </h3>
 
-      <p style="margin:10px 0 0 0;font-size:14px;color:#c9c9c9;">
-        Localidades: <strong style="color:#ffffff;">${order.quantity || 1}</strong>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        Monto: <strong style="color:#ffffff;">$${amount} ${currency || "USD"}</strong>
-      </p>
     </div>
 
     <!-- Resumen -->
-    <div style="padding:0 22px 18px 22px;">
-      <div style="background:#1e0045;border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.06);">
-        <div style="font-weight:bold;color:#ff4df0;margin-bottom:10px;font-size:14px;">
-          🧾 Resumen de tu solicitud
-        </div>
+    <div style="padding:24px;background:#fffaf2;">
 
-        <table style="width:100%;border-collapse:collapse;color:#ffffff;font-size:14px;">
+      <div style="background:#ffffff;border:1px solid #efd4aa;border-radius:12px;padding:20px;">
+
+        <h3 style="margin-top:0;color:#8f3608;">
+          📋 Resumen de tu pedido
+        </h3>
+
+        <table style="width:100%;font-size:15px;border-collapse:collapse;">
+
           <tr>
-            <td style="padding:6px 0;color:#cfcfcf;">Orden</td>
-            <td style="padding:6px 0;text-align:right;font-family:monospace;">${order.id}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#cfcfcf;">Estado</td>
-            <td style="padding:6px 0;text-align:right;">
-              <span style="color:#ff4df0;font-weight:bold;">En validación</span>
+            <td style="padding:8px 0;color:#6f5b4d;">Pedido</td>
+            <td style="padding:8px 0;text-align:right;font-family:monospace;">
+              ${order.id}
             </td>
           </tr>
+
           <tr>
-            <td style="padding:6px 0;color:#cfcfcf;">Localidades</td>
-            <td style="padding:6px 0;text-align:right;"><strong>${order.quantity || 1}</strong></td>
+            <td style="padding:8px 0;color:#6f5b4d;">Estado</td>
+            <td style="padding:8px 0;text-align:right;">
+              <strong style="color:#d07a00;">
+                En validación
+              </strong>
+            </td>
           </tr>
+
           <tr>
-            <td style="padding:6px 0;color:#cfcfcf;">Total</td>
-            <td style="padding:6px 0;text-align:right;"><strong>$${amount} ${currency || "USD"}</strong></td>
+            <td style="padding:8px 0;color:#6f5b4d;">Boletos</td>
+            <td style="padding:8px 0;text-align:right;">
+              ${order.quantity}
+            </td>
           </tr>
+
           <tr>
-            <td style="padding:6px 0;color:#cfcfcf;">Fecha</td>
-            <td style="padding:6px 0;text-align:right;">${new Date().toLocaleString("es-EC")}</td>
+            <td style="padding:8px 0;color:#6f5b4d;">Total</td>
+            <td style="padding:8px 0;text-align:right;">
+              <strong>$${amount} ${currency || "USD"}</strong>
+            </td>
           </tr>
+
+          <tr>
+            <td style="padding:8px 0;color:#6f5b4d;">Fecha</td>
+            <td style="padding:8px 0;text-align:right;">
+              ${new Date().toLocaleString("es-EC")}
+            </td>
+          </tr>
+
         </table>
 
-        <div style="margin-top:14px;color:#cccccc;font-size:13px;line-height:1.6;">
-          ⏳ Nuestro equipo validará tu pago en breve.  
-          Una vez validado, te enviaremos tus entradas digitales con código QR a este mismo correo.
-        </div>
       </div>
 
-      <!-- Importante -->
-      <div style="margin-top:14px;padding:14px 14px;border-radius:12px;
-                  background:rgba(255,77,240,0.10);
-                  border:1px solid rgba(255,77,240,0.30);
-                  color:#ffffff;font-size:13px;line-height:1.55;text-align:center;">
-        <strong style="color:#ff4df0;">IMPORTANTE:</strong>
-        El QR de ingreso se envía <strong>solo después</strong> de validar el pago.
-        <br/>
-        Si tu comprobante no es legible o falta información, te contactaremos.
+      <!-- Información -->
+      <div style="margin-top:18px;
+                  background:#7a2e12;
+                  color:#ffffff;
+                  padding:20px;
+                  border-radius:12px;
+                  text-align:center;">
+
+        <h3 style="margin-top:0;color:#ffd77a;">
+          📲 ¿Qué sucede ahora?
+        </h3>
+
+        <p style="margin:0;font-size:15px;line-height:1.7;">
+          Nuestro equipo verificará tu comprobante de pago.
+          <br><br>
+          Una vez aprobado, recibirás automáticamente un correo con
+          <strong>tu boleto digital y su código QR</strong>.
+          <br><br>
+          El día de la entrega únicamente deberás presentar ese QR para reclamar tu pedido.
+        </p>
+
       </div>
+
+      <!-- Aviso -->
+      <div style="margin-top:18px;
+                  background:#fff0c7;
+                  border-left:5px solid #df9625;
+                  border-radius:10px;
+                  padding:18px;
+                  color:#6b4413;
+                  font-size:14px;
+                  line-height:1.6;">
+
+        <strong>⚠️ Importante</strong><br>
+
+        • El código QR se enviará únicamente cuando el pago haya sido validado.<br>
+        • Cada QR permite retirar una sola vez el producto adquirido.<br>
+        • Si el comprobante presenta inconsistencias nos comunicaremos contigo.
+
+      </div>
+
     </div>
 
     <!-- Botones -->
-    <div style="padding:22px;text-align:center;background-color:#140032;">
-      <a href="${proof_url}" target="_blank"
-         style="display:inline-block;margin:8px;padding:12px 24px;
-                background-color:#ff4df0;color:#ffffff;
-                text-decoration:none;border-radius:8px;font-weight:bold;">
-        🔎 Ver mi comprobante
+    <div style="padding:26px;text-align:center;background:#f5e3c5;">
+
+      <a href="${proof_url}"
+         target="_blank"
+         style="display:inline-block;
+                margin:8px;
+                padding:13px 26px;
+                background:#a54814;
+                color:white;
+                text-decoration:none;
+                border-radius:8px;
+                font-weight:bold;">
+
+        📄 Ver mi comprobante
+
       </a>
 
-      <a href="https://wa.me/593997808994" target="_blank"
-         style="display:inline-block;margin:8px;padding:12px 24px;
-                background-color:#3a0066;color:#ffffff;
-                text-decoration:none;border-radius:8px;font-weight:bold;">
+      <a href="https://wa.me/593997808994"
+         target="_blank"
+         style="display:inline-block;
+                margin:8px;
+                padding:13px 26px;
+                background:#25D366;
+                color:white;
+                text-decoration:none;
+                border-radius:8px;
+                font-weight:bold;">
+
         📞 Atención al Cliente
+
       </a>
 
-      <div style="margin-top:10px;color:#9b8fd6;font-size:12px;">
-        Responde a este correo si necesitas corregir datos de tu compra.
-      </div>
     </div>
 
     <!-- Footer -->
-    <div style="background-color:#0d0221;padding:18px;text-align:center;color:#888;font-size:12px;">
-      © ${new Date().getFullYear()} NORTH EVENTS<br/>
-      Vive la experiencia. Siente la música.
+    <div style="background:#4d1e0c;padding:18px;text-align:center;color:#f7dcc3;font-size:12px;">
+      © ${new Date().getFullYear()} Venta de Hornado · Gracias por apoyar nuestra tradición.
     </div>
 
   </div>
 </div>
 `,
-});
+  });
 
   emitDashboardUpdate(req, {
     eventId: order.eventId,
@@ -202,17 +260,17 @@ const getAll = catchError(async (req, res) => {
     is_active: !isTrash, // activos(true) o papelera(false)
   };
 
-const results = await Payments.findAll({
-  where,
-  include: [
-    {
-      model: Orders,
-      required: false,
-      attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "eventId"],
-    },
-  ],
-  order: [["createdAt", "DESC"]],
-});
+  const results = await Payments.findAll({
+    where,
+    include: [
+      {
+        model: Orders,
+        required: false,
+        attributes: ["id", "buyer_name", "buyer_email", "buyer_phone", "quantity", "eventId"],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
 
 
   return res.json(results);
@@ -363,34 +421,91 @@ const update = catchError(async (req, res) => {
         const qrUrl = `${baseUrl}/uploads/tickets/${tk.code}.png`;
 
         return `
-  <div style="background:#1e0045;border-radius:12px;padding:18px;margin:14px 0;color:#fff;">
-    <div style="text-align:center;">
-      <div style="font-weight:bold;color:#ff4df0;margin-bottom:10px;font-size:15px;">
-        ENTRADA #${idx + 1}
-      </div>
+<div style="background:#ffffff;
+            border:1px solid #efd4aa;
+            border-radius:14px;
+            padding:22px;
+            margin:18px 0;
+            color:#5a351d;">
 
-      <img src="${qrUrl}" alt="QR Ticket"
-        style="width:220px;max-width:100%;border-radius:10px;background:#fff;padding:10px;" />
+  <div style="text-align:center;">
 
-      <div style="margin-top:12px;font-size:13px;color:#ccc;">
-        Código:
-      </div>
-      <div style="font-family:monospace;word-break:break-all;font-size:13px;color:#ffffff;">
-        ${tk.code}
-      </div>
-
-      <div style="margin-top:14px;padding:12px 14px;border-radius:10px;
-                  background:rgba(255,77,240,0.12);border:1px solid rgba(255,77,240,0.35);
-                  color:#ffffff;font-size:14px;line-height:1.5;">
-        <strong style="color:#ff4df0;">IMPORTANTE:</strong>
-        El día del evento debes <strong>presentar este QR</strong> en la entrada para registrar tu ingreso.
-        <br/>
-        <span style="color:#cccccc;font-size:13px;">
-          Puedes mostrarlo desde tu celular o impreso. No compartas tu QR con terceros.
-        </span>
-      </div>
+    <div style="display:inline-block;
+                background:#a54814;
+                color:#ffffff;
+                padding:8px 18px;
+                border-radius:30px;
+                font-weight:bold;
+                font-size:15px;
+                margin-bottom:16px;">
+      🍖 BOLETO #${idx + 1}
     </div>
+
+    <div>
+      <img
+        src="${qrUrl}"
+        alt="QR Pedido"
+        style="width:220px;
+               max-width:100%;
+               background:#ffffff;
+               border:6px solid #f5e3c5;
+               border-radius:12px;
+               padding:10px;" />
+    </div>
+
+    <div style="margin-top:16px;
+                font-size:13px;
+                color:#8b5d3c;">
+      Código del boleto
+    </div>
+
+    <div style="margin-top:6px;
+                font-family:monospace;
+                font-size:14px;
+                font-weight:bold;
+                color:#7a2e12;
+                word-break:break-word;">
+      ${tk.code}
+    </div>
+
+    <div style="margin-top:20px;
+                padding:18px;
+                border-radius:12px;
+                background:#fff5dc;
+                border-left:5px solid #d88d1b;
+                text-align:left;
+                color:#6d4a27;
+                line-height:1.7;
+                font-size:14px;">
+
+      <strong style="color:#8a420d;">
+        📲 ¿Cómo reclamar tu pedido?
+      </strong>
+
+      <br><br>
+
+      ✔ Presenta este código QR al personal encargado el día de la entrega.
+
+      <br><br>
+
+      ✔ Nuestro equipo escaneará el QR y registrará automáticamente la entrega de tu pedido.
+
+      <br><br>
+
+      ✔ Este boleto es de un solo uso. Una vez escaneado quedará marcado como
+      <strong>ENTREGADO</strong> y no podrá utilizarse nuevamente.
+
+      <br><br>
+
+      <span style="font-size:13px;color:#8a6d4d;">
+        🔒 No compartas este código QR con otras personas.
+      </span>
+
+    </div>
+
   </div>
+
+</div>
 `;
       }),
     );
@@ -398,50 +513,117 @@ const update = catchError(async (req, res) => {
     // 5.3 Enviar email con entradas
     await sendEmail({
       to: order.buyer_email,
-      subject: "🎟️ ¡Pago validado! Aquí están tus entradas - NORTH EVENTS",
+      subject: "🍖 ¡Pago confirmado! Tu boleto de hornado está listo",
       html: `
-        <div style="margin:0;padding:0;background-color:#0d0221;font-family:Arial,Helvetica,sans-serif;">
-          <div style="max-width:650px;margin:0 auto;background-color:#140032;border-radius:12px;overflow:hidden;">
-            <div style="background:linear-gradient(90deg,#1f0036,#3a0066);padding:28px;text-align:center;">
-              <img src="https://res.cloudinary.com/desgmhmg4/image/upload/v1771055860/north_logo_ghuajx.png"
-                   alt="NORTH EVENTS" style="width:180px;max-width:100%;" />
-            </div>
+    <div style="margin:0;padding:0;background-color:#fff4df;font-family:Arial,Helvetica,sans-serif;">
+      <div style="max-width:650px;margin:0 auto;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(91,49,14,.18);">
 
-            <div style="padding:26px;color:#ffffff;text-align:center;">
-              <h2 style="margin:0;font-size:24px;color:#ff4df0;">✅ ¡Pago validado!</h2>
-              <p style="margin:14px 0 0 0;font-size:16px;color:#dddddd;">
-                Hola <strong>${order.buyer_name}</strong>, tus entradas están listas.
-              </p>
-              <h3 style="margin:14px 0 0 0;font-size:20px;color:#ffffff;">
-                ${event?.title || "Evento NORTH"}
-              </h3>
-              <p style="margin:10px 0 0 0;color:#cccccc;">
-                Cantidad de entradas: <strong>${order.quantity}</strong>
-              </p>
-            </div>
+        <!-- IMAGEN PRINCIPAL -->
+        <div style="background:linear-gradient(135deg,#7a2e12,#c65b1e);padding:0;text-align:center;">
+          <img
+            src="https://res.cloudinary.com/desgmhmg4/image/upload/v1784248773/hornado_c65n2g.png"
+            alt="Hornado ecuatoriano"
+            style="display:block;width:100%;max-width:650px;height:auto;border:0;"
+          />
+        </div>
 
-            <div style="padding:0 22px 10px 22px;">
-              ${ticketCardsHtml.join("")}
-            </div>
+        <!-- ENCABEZADO -->
+        <div style="padding:28px 26px 20px;text-align:center;background-color:#fffaf1;">
+          <div style="display:inline-block;padding:8px 16px;background-color:#f5c451;color:#5a260c;border-radius:20px;font-size:13px;font-weight:bold;">
+            ✅ PAGO CONFIRMADO
+          </div>
 
-<div style="padding:18px 26px;text-align:center;background-color:#140032;">
-  <a href="https://wa.me/593997808994" 
-     target="_blank"
-     style="display:inline-block;margin:8px;padding:12px 22px;
-            background-color:#25D366;color:#ffffff;
-            text-decoration:none;border-radius:6px;
-            font-weight:bold;">
-    📞 Contactar Atención al Cliente
-  </a>
-</div>
+          <h1 style="margin:18px 0 8px;color:#7a2e12;font-size:28px;line-height:1.2;">
+            ¡Tu hornado está reservado!
+          </h1>
 
+          <p style="margin:0;color:#5f493d;font-size:16px;line-height:1.6;">
+            Hola <strong style="color:#7a2e12;">${order.buyer_name}</strong>,
+            tu compra fue validada correctamente.
+          </p>
+        </div>
 
-            <div style="background-color:#0d0221;padding:18px;text-align:center;color:#888;font-size:12px;">
-              © ${new Date().getFullYear()} NORTH EVENTS
-            </div>
+        <!-- DETALLE DE COMPRA -->
+        <div style="padding:8px 26px 24px;background-color:#fffaf1;">
+          <div style="background-color:#ffffff;border:1px solid #f0d4ad;border-radius:12px;padding:20px;text-align:center;">
+            <h2 style="margin:0 0 12px;color:#9a3f14;font-size:21px;">
+              🍽️ ${event?.title || "Venta de Hornado"}
+            </h2>
+
+            <p style="margin:6px 0;color:#6b5143;font-size:15px;">
+              Boletos adquiridos:
+              <strong style="color:#7a2e12;">${order.quantity}</strong>
+            </p>
+
+            ${event?.date
+          ? `
+                  <p style="margin:6px 0;color:#6b5143;font-size:15px;">
+                    Fecha de entrega:
+                    <strong style="color:#7a2e12;">${event.date}</strong>
+                  </p>
+                `
+          : ""
+        }
+
+            ${event?.location
+          ? `
+                  <p style="margin:6px 0;color:#6b5143;font-size:15px;">
+                    Lugar:
+                    <strong style="color:#7a2e12;">${event.location}</strong>
+                  </p>
+                `
+          : ""
+        }
           </div>
         </div>
-      `,
+
+        <!-- INSTRUCCIONES -->
+        <div style="padding:22px 26px;background-color:#7a2e12;color:#ffffff;text-align:center;">
+          <h3 style="margin:0 0 10px;font-size:20px;color:#ffd77a;">
+            📲 ¿Cómo retirar tu pedido?
+          </h3>
+
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#fff8e9;">
+            Presenta el código QR de cada boleto al personal encargado.
+            Una vez escaneado, el boleto quedará registrado como
+            <strong>ENTREGADO</strong> y no podrá volver a utilizarse.
+          </p>
+        </div>
+
+        <!-- BOLETOS QR -->
+        <div style="padding:24px 22px 12px;background-color:#fffaf1;">
+          ${ticketCardsHtml.join("")}
+        </div>
+
+        <!-- AVISO -->
+        <div style="padding:10px 26px 24px;background-color:#fffaf1;">
+          <div style="background-color:#fff0c7;border-left:5px solid #e59b23;border-radius:8px;padding:14px;color:#684415;font-size:14px;line-height:1.5;">
+            ⚠️ Conserva este correo y no compartas tus códigos QR. Cada boleto permite retirar una sola porción o producto, según tu compra.
+          </div>
+        </div>
+
+        <!-- CONTACTO -->
+        <div style="padding:22px 26px;text-align:center;background-color:#f5e3c5;">
+          <p style="margin:0 0 14px;color:#70401f;font-size:14px;">
+            ¿Tienes alguna consulta sobre tu pedido?
+          </p>
+
+          <a
+            href="https://wa.me/593997808994"
+            target="_blank"
+            style="display:inline-block;padding:13px 24px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;"
+          >
+            📞 Contactar Atención al Cliente
+          </a>
+        </div>
+
+        <!-- PIE -->
+        <div style="background-color:#4d1e0c;padding:18px;text-align:center;color:#f5d8bc;font-size:12px;">
+          © ${new Date().getFullYear()} NORTH EVENTS · Venta de Hornado
+        </div>
+      </div>
+    </div>
+  `,
     });
 
     emitDashboardUpdate(req, {
