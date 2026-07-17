@@ -413,7 +413,7 @@ const update = catchError(async (req, res) => {
 
     const ticketCardsHtml = await Promise.all(
       createdTickets.map(async (tk, idx) => {
-        const ticketUrl = `https://northeventos.com/ticket/${tk.code}`;
+        const ticketUrl = `https://kafersolucionesweb.com/ticket/${tk.code}`;
         const qrFilePath = path.join(ticketsDir, `${tk.code}.png`);
 
         await QRCode.toFile(qrFilePath, ticketUrl, { width: 300, margin: 1 });
@@ -619,7 +619,7 @@ const update = catchError(async (req, res) => {
 
         <!-- PIE -->
         <div style="background-color:#4d1e0c;padding:18px;text-align:center;color:#f5d8bc;font-size:12px;">
-          © ${new Date().getFullYear()} NORTH EVENTS · Venta de Hornado
+          © ${new Date().getFullYear()} Venta de Hornado
         </div>
       </div>
     </div>
